@@ -1,0 +1,33 @@
+@startuml
+
+actor User
+participant "Shop API" as ShopAPI
+participant "CRM API" as CRMAPI
+participant "Redis Cache" as Cache
+participant "PostgreSQL" as PostgreSQL
+
+== Операция чтения списка заказов ==
+User -> ShopAPI : Запрос списка заказов
+ShopAPI -> Cache : Проверить кеш
+alt Заказы есть в кеше
+    Cache -> ShopAPI : Вернуть список заказов
+else Заказов нет в кеше
+    ShopAPI -> CRMAPI : Запрос списка заказов
+    CRMAPI -> PostgreSQL : Запрос заказов из БД
+    PostgreSQL -> CRMAPI : Отправить список заказов
+    CRMAPI -> ShopAPI : Отправить список заказов
+    ShopAPI -> Cache : Записать список заказов в кеш
+    Cache -> ShopAPI : Подтверждение кеширования
+end
+ShopAPI -> User : Вернуть список заказов
+
+== Операция изменения статуса заказа ==
+User -> ShopAPI : Обновить статус заказа (Order_ID)
+ShopAPI -> CRMAPI : Отправить запрос на обновление
+CRMAPI -> Cache : Обновить статус заказа в кеше
+Cache -> PostgreSQL : Обновить статус заказа в БД
+PostgreSQL -> CRMAPI : Подтвердить обновление
+CRMAPI -> ShopAPI : Подтвердить обновление
+ShopAPI -> User : Подтверждение обновления статуса
+
+@enduml
